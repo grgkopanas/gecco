@@ -12,15 +12,16 @@ from gecco_torch.models.activation import GaussianActivation
 from gecco_torch.data.shapenet_unc import ShapeNetUncondDataModule
 from gecco_torch.ema import EMACallback
 from gecco_torch.vis import PCVisCallback
+from pvd.model.multiview import  MultiView_DiffusionModel2
 
 dataset_path = (
-    "/cvlabdata2/cvlab/datasets_tyszkiewicz/point-flow-data/ShapeNetCore.v2.PC15k/"
+    "/data/graphdeco/user/gkopanas/point_diffusion/ShapeNetCore.v2.PC15k/"
 )
 data = ShapeNetUncondDataModule(
     dataset_path,
     category="airplane",
-    epoch_size=5_000,
-    batch_size=48,
+    epoch_size=int(5_000),
+    batch_size=int(48),
     num_workers=16,
 )
 
@@ -28,6 +29,7 @@ reparam = GaussianReparam(
     mean=torch.tensor([0.0, 0.01, 0.05]),
     sigma=torch.tensor([0.11, 0.04, 0.17]),
 )
+
 
 feature_dim = 3 * 128
 network = LinearLift(
@@ -41,6 +43,28 @@ network = LinearLift(
     ),
     feature_dim=feature_dim,
 )
+
+"""
+
+class MultiView_Wrapper(torch.nn.Module):
+    def __init__(self):
+        super(MultiView_Wrapper, self).__init__()
+        H, W = 128, 128
+        self.model = MultiView_DiffusionModel2(device=torch.device(0),
+                                               num_points=None,
+                                               num_views_per_step=None,
+                                               cam_radius=None,
+                                               H=H, W=W, FOV=None,
+                                               cam_conditioning=False,
+                                               normalize=True,
+                                               act_in_viewspace=None,
+                                               stationary_cams=True)
+
+    def forward(self, inputs, timesteps, raw_context=None, post_context = None,  do_cache= False, cache= None):
+        return self.model(inputs.permute(0,2,1), timesteps.squeeze()).permute(0,2,1)
+
+network = MultiView_Wrapper()
+"""
 
 model = Diffusion(
     backbone=EDMPrecond(
@@ -72,6 +96,7 @@ def trainer():
         ],
         max_epochs=50,
         precision="16-mixed",
+        #precision="32",
         gradient_clip_val=1.0,
         gradient_clip_algorithm="value",
     )
