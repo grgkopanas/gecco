@@ -51,14 +51,17 @@ class EDMPrecond(nn.Module):
         c_noise = sigma.log() / 4
         c_noise = c_noise
 
-        F_x, cache = self.model(
-            (c_in * x), c_noise, raw_context, post_context, do_cache, cache
-        )
-        denoised = c_skip * x + c_out * F_x
-
         if not do_cache:
+            F_x = self.model((c_in * x), 
+                             c_noise, raw_context,
+                             post_context, do_cache, cache)
+            denoised = c_skip * x + c_out * F_x
             return denoised
         else:
+            F_x, cache = self.model((c_in * x), 
+                                     c_noise, raw_context,
+                                     post_context, do_cache, cache)
+            denoised = c_skip * x + c_out * F_x
             return denoised, cache
 
 

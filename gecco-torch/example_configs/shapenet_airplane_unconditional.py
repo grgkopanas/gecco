@@ -21,7 +21,7 @@ data = ShapeNetUncondDataModule(
     dataset_path,
     category="airplane",
     epoch_size=int(5_000),
-    batch_size=int(48),
+    batch_size=int(12),
     num_workers=16,
 )
 
@@ -30,7 +30,7 @@ reparam = GaussianReparam(
     sigma=torch.tensor([0.11, 0.04, 0.17]),
 )
 
-
+"""
 feature_dim = 3 * 128
 network = LinearLift(
     inner=SetTransformer(
@@ -64,7 +64,6 @@ class MultiView_Wrapper(torch.nn.Module):
         return self.model(inputs.permute(0,2,1), timesteps.squeeze()).permute(0,2,1)
 
 network = MultiView_Wrapper()
-"""
 
 model = Diffusion(
     backbone=EDMPrecond(
@@ -95,13 +94,13 @@ def trainer():
             PCVisCallback(n=8, n_steps=128, point_size=0.01),
         ],
         max_epochs=50,
-        precision="16-mixed",
-        #precision="32",
+        #precision="16-mixed",
+        precision="32",
         gradient_clip_val=1.0,
         gradient_clip_algorithm="value",
     )
 
 
 if __name__ == "__main__":
-    model = torch.compile(model)
+    #model = torch.compile(model)
     trainer().fit(model, data)
