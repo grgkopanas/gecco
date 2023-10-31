@@ -12,7 +12,63 @@ from gecco_torch.models.activation import GaussianActivation
 from gecco_torch.data.shapenet_unc import ShapeNetUncondDataModule
 from gecco_torch.ema import EMACallback
 from gecco_torch.vis import PCVisCallback
-from pvd.model.multiview import  MultiView_DiffusionModel2
+from pvd.model.multiview import  MultiView_DiffusionModel2, MultiView_DiffusionModel
+
+class MultiView_Wrapper_Voxel(torch.nn.Module):
+    def __init__(self):
+        super(MultiView_Wrapper_Voxel, self).__init__()
+        H, W = 128, 128
+        self.model = MultiView_DiffusionModel2(device=torch.device(0),
+                                               num_points=None,
+                                               num_views_per_step=None,
+                                               cam_radius=None,
+                                               H=H, W=W, FOV=None,
+                                               cam_conditioning=False,
+                                               normalize=True,
+                                               act_in_viewspace=None,
+                                               stationary_cams=True)
+
+    def forward(self, inputs, timesteps, raw_context=None, post_context = None,  do_cache= False, cache= None):
+        return self.model(inputs.permute(0,2,1), timesteps.squeeze()).permute(0,2,1)
+
+class MultiView_Wrapper_GS(torch.nn.Module):
+    def __init__(self):
+        super(MultiView_Wrapper_GS, self).__init__()
+        H, W = 128, 128
+        self.model = MultiView_DiffusionModel(device=torch.device(0),
+                                               num_points=2048,
+                                               num_views_per_step=6,
+                                               cam_radius=1.0,
+                                               H=H, W=W, FOV=3.14/4.0,
+                                               cam_conditioning=False,
+                                               normalize=True,
+                                               act_in_viewspace=None,
+                                               stationary_cams=True)
+
+    def forward(self, inputs, timesteps, raw_context=None, post_context = None,  do_cache= False, cache= None):
+        return self.model(inputs.permute(0,2,1), timesteps.squeeze()).permute(0,2,1)
+
+def model_transformer():
+    feature_dim = 3 * 128
+    network = LinearLift(
+        inner=SetTransformer(
+            n_layers=6,
+            num_inducers=64,
+            feature_dim=feature_dim,
+            t_embed_dim=1,
+            num_heads=8,
+            activation=GaussianActivation,
+        ),
+        feature_dim=feature_dim,
+    )
+    return network
+
+def model_multiview_3GS():
+    return MultiView_Wrapper_GS()
+
+def model_multiview_voxel():
+    return MultiView_Wrapper_Voxel()
+
 
 dataset_path = (
     "/data/graphdeco/user/gkopanas/point_diffusion/ShapeNetCore.v2.PC15k/"
@@ -30,40 +86,10 @@ reparam = GaussianReparam(
     sigma=torch.tensor([0.11, 0.04, 0.17]),
 )
 
-"""
-feature_dim = 3 * 128
-network = LinearLift(
-    inner=SetTransformer(
-        n_layers=6,
-        num_inducers=64,
-        feature_dim=feature_dim,
-        t_embed_dim=1,
-        num_heads=8,
-        activation=GaussianActivation,
-    ),
-    feature_dim=feature_dim,
-)
+network = model_multiview_voxel()
+#network = model_multiview_3GS()
 
-"""
 
-class MultiView_Wrapper(torch.nn.Module):
-    def __init__(self):
-        super(MultiView_Wrapper, self).__init__()
-        H, W = 128, 128
-        self.model = MultiView_DiffusionModel2(device=torch.device(0),
-                                               num_points=None,
-                                               num_views_per_step=None,
-                                               cam_radius=None,
-                                               H=H, W=W, FOV=None,
-                                               cam_conditioning=False,
-                                               normalize=True,
-                                               act_in_viewspace=None,
-                                               stationary_cams=True)
-
-    def forward(self, inputs, timesteps, raw_context=None, post_context = None,  do_cache= False, cache= None):
-        return self.model(inputs.permute(0,2,1), timesteps.squeeze()).permute(0,2,1)
-
-network = MultiView_Wrapper()
 
 model = Diffusion(
     backbone=EDMPrecond(
@@ -94,10 +120,10 @@ def trainer():
             PCVisCallback(n=8, n_steps=128, point_size=0.01),
         ],
         max_epochs=50,
-        #precision="16-mixed",
-        precision="32",
+        precision="16-mixed",
+        #precision="32",
         gradient_clip_val=1.0,
-        gradient_clip_algorithm="value",
+        gradient_clip_algorithm="value"
     )
 
 
