@@ -104,6 +104,20 @@ class LogUniformSchedule(nn.Module):
     def extra_repr(self) -> str:
         return f"sigma_min={self.sigma_min}, sigma_max={self.sigma_max}, low_discrepancy={self.low_discrepancy}"
 
+    def test(self, data):
+        u = torch.linspace(0,1, data.shape[0], device=data.device)
+
+        if self.low_discrepancy:
+            div = 1 / data.shape[0]
+            u = div * u
+            u = u + div * torch.arange(data.shape[0], device=data.device)
+
+        sigma = (
+            u * (self.log_sigma_max - self.log_sigma_min) + self.log_sigma_min
+        ).exp()
+        print(sigma)
+        return sigma.reshape(-1, *ones(data.ndim - 1))
+        
     def forward(self, data: Tensor) -> Tensor:
         u = torch.rand(data.shape[0], device=data.device)
 
@@ -220,7 +234,7 @@ class Diffusion(pl.LightningModule):
             x,
             ctx,
         )
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, sync_dist=True)
 
         return loss
 
@@ -231,7 +245,7 @@ class Diffusion(pl.LightningModule):
             x,
             ctx,
         )
-        self.log("val_loss", loss)
+        self.log("val_loss", loss, sync_dist=True)
 
     def forward(
         self,

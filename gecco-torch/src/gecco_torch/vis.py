@@ -2,7 +2,7 @@ from typing import Any
 import torch
 import matplotlib.pyplot as plt
 import lightning.pytorch as pl
-
+import wandb
 from gecco_torch.diffusion import Diffusion
 from gecco_torch.structs import Example
 
@@ -111,6 +111,12 @@ class PCVisCallback(pl.Callback):
             colors[:, : self.batch.data.shape[1], 1] = 255  # green for ground truth
             colors[:, self.batch.data.shape[1] :, 0] = 255  # red for samples
 
+        """
+        for i in range(vertices.shape[0]):
+            pl_module.logger.experiment.log(
+                {f"point_cloud_{i}": wandb.Object3D(vertices.cpu().detach().numpy()[i])}
+            )
+        """
         pl_module.logger.experiment.add_mesh(
             tag="val/samples",
             vertices=vertices,

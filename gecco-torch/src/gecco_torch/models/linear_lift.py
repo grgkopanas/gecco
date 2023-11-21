@@ -43,4 +43,7 @@ class LinearLift(nn.Module):
 
         features = self.lift(geometry)
         features, out_cache = self.inner(features, embed, do_cache, cache)
-        return self.lower(features), out_cache
+        if do_cache:
+            return self.lower(features), out_cache
+        else: 
+            return self.lower(features)
