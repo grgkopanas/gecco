@@ -15,20 +15,20 @@ class LinearLift(nn.Module):
         self,
         inner: SetTransformer,
         feature_dim: int,
-        geometry_dim: int = 3,
+        input_dim: int = 3,
         do_norm: bool = True,
     ):
         super().__init__()
-        self.lift = nn.Linear(geometry_dim, feature_dim)
+        self.lift = nn.Linear(input_dim, feature_dim)
         self.inner = inner
 
         if do_norm:
             self.lower = nn.Sequential(
                 nn.LayerNorm(feature_dim, elementwise_affine=False),
-                nn.Linear(feature_dim, geometry_dim),
+                nn.Linear(feature_dim, input_dim),
             )
         else:
-            self.lower = nn.Linear(feature_dim, geometry_dim)
+            self.lower = nn.Linear(feature_dim, input_dim)
 
     def forward(
         self,

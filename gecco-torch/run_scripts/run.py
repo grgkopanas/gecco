@@ -4,8 +4,10 @@ import os
 from configurations.common import prepare_trainer
 from configurations.gaussian_splatting import prepare_data, prepare_model
 from configurations.arguments import get_args
+from einops import rearrange
+import torch
 
-def dry_run_for_stats():
+def dry_run_for_stats(model, data):
     batches = []
     data.setup()
     dataloader = data.train_dataloader()
@@ -23,27 +25,14 @@ def dry_run_for_stats():
     max_dy = (batches.data[:, :, 1].max(dim=1)[0] - batches.data[:, :, 1].min(dim=1)[0]).max()
     max_dz = (batches.data[:, :, 2].max(dim=1)[0] - batches.data[:, :, 2].min(dim=1)[0]).max()
 
-    print(f"[UNPREPARED] {batches.data[:, :, 0].std()=}")
-    print(f"[UNPREPARED] {batches.data[:, :, 1].std()=}")
-    print(f"[UNPREPARED] {batches.data[:, :, 2].std()=}")
-    print(f"===============")
-    print(f"[UNPREPARED] {batches.data[:, :, 0].mean()=}")
-    print(f"[UNPREPARED] {batches.data[:, :, 1].mean()=}")
-    print(f"[UNPREPARED] {batches.data[:, :, 2].mean()=}")
-    print(f"===============")
-    print(f"[UNPREPARED] {max_dx=}")
-    print(f"[UNPREPARED] {max_dy=}")
-    print(f"[UNPREPARED] {max_dz=}")
+    print(f"[UNPREPARED] Standard Deviation: {batches.data.std(dim=(0,1))=}")
+    print(f"[UNPREPARED] Mean: {batches.data.mean(dim=(0,1))=}")
 
-    diff_adjusted = reparam.data_to_diffusion(batches.data, batches.ctx)
+    diff_adjusted = model.reparam.data_to_diffusion(batches.data, batches.ctx)
     
-    print(f"[PREPARED] {diff_adjusted[...,0].std()=}")
-    print(f"[PREPARED] {diff_adjusted[...,1].std()=}")
-    print(f"[PREPARED] {diff_adjusted[...,2].std()=}")
+    print(f"[PREPARED] Standard Deviation: {diff_adjusted.std(dim=(0,1))=}")
+    print(f"[PREPARED] Mean: {diff_adjusted.mean(dim=(0,1))=}")
 
-    print(f"[PREPARED] max_x - min_x={(diff_adjusted[1:2, :, 0].max(dim=1)[0] - diff_adjusted[1:2, :, 0].min(dim=1)[0]).max()}")
-    print(f"[PREPARED] max_x - min_x={(diff_adjusted[1:2, :, 1].max(dim=1)[0] - diff_adjusted[1:2, :, 1].min(dim=1)[0]).max()}")
-    print(f"[PREPARED] max_x - min_x={(diff_adjusted[1:2, :, 2].max(dim=1)[0] - diff_adjusted[1:2, :, 2].min(dim=1)[0]).max()}")
 
 
     diff_flat = rearrange(diff_adjusted[:6], 'b n d -> (b n) d')
@@ -62,12 +51,11 @@ def train(args):
     trainer = prepare_trainer(args)
 
     #model = torch.compile(model)
-    trainer.fit(model, data)
-
+    if True:
+        trainer.fit(model, data)
+    else:
+        dry_run_for_stats(model, data)
 
 if __name__ == "__main__":
     args = get_args()
-    if True:
-        train(args)
-    else:
-        dry_run_for_stats()
+    train(args)

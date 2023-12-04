@@ -15,9 +15,9 @@ from gecco_torch.ema import EMACallback
 from gecco_torch.vis import PCVisCallback
 
 class MultiView_Wrapper_Voxel(torch.nn.Module):
-    def __init__(self, resolution):
+    def __init__(self, args):
         super(MultiView_Wrapper_Voxel, self).__init__()
-        H, W = resolution, resolution
+        H, W = args.voxel_resolution, args.voxel_resolution
         self.model = MultiView_DiffusionModel2(device=torch.device(0),
                                                num_points=None,
                                                num_views_per_step=None,
@@ -26,7 +26,8 @@ class MultiView_Wrapper_Voxel(torch.nn.Module):
                                                cam_conditioning=False,
                                                normalize=True,
                                                act_in_viewspace=None,
-                                               stationary_cams=True)
+                                               stationary_cams=True,
+                                               full_appearance=args.full_appearance)
 
     def forward(self, inputs, timesteps, raw_context=None, post_context = None,  do_cache= False, cache= None):
         return self.model(inputs.permute(0,2,1), timesteps.squeeze()).permute(0,2,1)
@@ -48,9 +49,15 @@ class MultiView_Wrapper_GS(torch.nn.Module):
     def forward(self, inputs, timesteps, raw_context=None, post_context = None,  do_cache= False, cache= None):
         return self.model(inputs.permute(0,2,1), timesteps.squeeze()).permute(0,2,1)
 
-def model_transformer():
+def model_transformer(args):
+    if args.full_appearance:
+        in_channels = 17
+    else:
+        in_channels = 3
+
     feature_dim = 3 * 128
     network = LinearLift(
+        input_dim=in_channels,
         inner=SetTransformer(
             n_layers=6,
             num_inducers=64,
@@ -66,15 +73,15 @@ def model_transformer():
 def model_multiview_3GS():
     return MultiView_Wrapper_GS()
 
-def model_multiview_voxel(resolution=128):
-    return MultiView_Wrapper_Voxel(resolution)
+def model_multiview_voxel(args):
+    return MultiView_Wrapper_Voxel(args)
 
 
 def get_network(args):
     if args.network_type=="multiview_voxel":
-        return model_multiview_voxel(args.voxel_resolution)
+        return model_multiview_voxel(args)
     elif args.network_type=="transformer":
-        return model_transformer()
+        return model_transformer(args)
     elif args.nework_type=="multiview_gaussian":
         return model_multiview_3GS()
     else:
@@ -101,7 +108,7 @@ def prepare_trainer(args):
             ),
             PCVisCallback(n=8, n_steps=128, point_size=0.01),
         ],
-        max_epochs=50,
+        max_epochs=args.max_epoch,
         #precision="16-mixed",
         precision="32",
         gradient_clip_val=1.0,

@@ -14,8 +14,9 @@ class Dataset3DGS:
         root: str,
         split: str,
         n_points: int,
-        batch_size: int = 48,
+        full_appearance: bool,
     ):
+        self.full_appearance = full_appearance
         self.n_points = n_points
         self.path = os.path.join(root, split)
         if not os.path.exists(self.path):
@@ -24,7 +25,6 @@ class Dataset3DGS:
         self.plys = []
         for d in os.listdir(self.path):
             self.plys.append(os.path.join(self.path, d, "point_cloud", "iteration_7000", "point_cloud.ply"))
-        self.batch_size = batch_size
 
     def __len__(self):
         return len(self.plys)
@@ -34,10 +34,35 @@ class Dataset3DGS:
         xyz = np.stack((np.asarray(plydata.elements[0]["x"]),
                         np.asarray(plydata.elements[0]["y"]),
                         np.asarray(plydata.elements[0]["z"])),  axis=1)
+
+        f_dc = np.stack((np.asarray(plydata.elements[0]["f_dc_0"]),
+                         np.asarray(plydata.elements[0]["f_dc_1"]),
+                         np.asarray(plydata.elements[0]["f_dc_2"])),  axis=1)
+        
+        f_rest = np.stack((
+                        np.asarray(plydata.elements[0]["f_rest_0"]), 
+                        np.asarray(plydata.elements[0]["f_rest_3"]),
+                        np.asarray(plydata.elements[0]["f_rest_6"]),
+
+                        np.asarray(plydata.elements[0]["f_rest_1"]),
+                        np.asarray(plydata.elements[0]["f_rest_4"]),
+                        np.asarray(plydata.elements[0]["f_rest_7"]),
+                        
+                        np.asarray(plydata.elements[0]["f_rest_2"]),
+                        np.asarray(plydata.elements[0]["f_rest_5"]),
+                        np.asarray(plydata.elements[0]["f_rest_8"])),  axis=1)
+
+        opacity = np.asarray(plydata.elements[0]["opacity"])[..., None]
+        scale = np.asarray(plydata.elements[0]["scale_0"])[..., None]
+
+        if self.full_appearance:
+            properties = np.concatenate((xyz, f_dc, f_rest, opacity, scale), axis=1)
+        else:
+            properties = xyz
         #points = np.load(os.path.join(self.path, self.npys[index]))
         #points = torch.from_numpy(points).to(torch.float32)
-        perm = torch.randperm(xyz.shape[0])[: self.n_points]
-        selected = xyz[perm]
+        perm = torch.randperm(properties.shape[0])[: self.n_points]
+        selected = properties[perm]
         return Example(selected, [])
 
 
@@ -46,6 +71,7 @@ class UncondDataModule_3DGS(pl.LightningDataModule):
         self,
         root: str,
         n_points: int,
+        full_appearance: bool,
         batch_size: int = 48,
         num_workers: int = 8,
         epoch_size: int | None = 10_000,
@@ -57,11 +83,12 @@ class UncondDataModule_3DGS(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.epoch_size = epoch_size
+        self.full_appearance = full_appearance
 
     def setup(self, stage=None):
-        self.train = Dataset3DGS(self.root, "train", self.n_points)
-        self.val = Dataset3DGS(self.root, "val", self.n_points)
-        self.test = Dataset3DGS(self.root, "test", self.n_points)
+        self.train = Dataset3DGS(self.root, "train", self.n_points, self.full_appearance)
+        self.val = Dataset3DGS(self.root, "val", self.n_points, self.full_appearance)
+        self.test = Dataset3DGS(self.root, "test", self.n_points, self.full_appearance)
 
     def train_dataloader(self):
         if self.epoch_size is None:

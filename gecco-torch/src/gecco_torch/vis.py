@@ -5,7 +5,16 @@ import lightning.pytorch as pl
 import wandb
 from gecco_torch.diffusion import Diffusion
 from gecco_torch.structs import Example
+from utils import render_batch
+import math
+import torchvision
 
+def polar2cart(r, theta, phi):
+    return [
+         r * math.sin(theta) * math.cos(phi),
+         r * math.sin(theta) * math.sin(phi),
+         r * math.cos(theta)
+    ]
 
 def plot_3d(clouds, colors=["blue", "red", "green"], shared_ax=False, images=None):
     assert len(clouds) <= len(colors)
@@ -44,7 +53,6 @@ def plot_3d(clouds, colors=["blue", "red", "green"], shared_ax=False, images=Non
             ax.axis("off")
 
     return fig
-
 
 class PCVisCallback(pl.Callback):
     """
@@ -88,7 +96,7 @@ class PCVisCallback(pl.Callback):
 
         with torch.random.fork_rng(), torch.no_grad():
             torch.manual_seed(42)
-
+            print(f"batch size: {self.batch.data.shape}")
             samples = pl_module.sample_stochastic(
                 shape=self.batch.data.shape,
                 context=self.batch.ctx,
@@ -110,6 +118,7 @@ class PCVisCallback(pl.Callback):
             )
             colors[:, : self.batch.data.shape[1], 1] = 255  # green for ground truth
             colors[:, self.batch.data.shape[1] :, 0] = 255  # red for samples
+            
 
         """
         for i in range(vertices.shape[0]):
@@ -119,7 +128,7 @@ class PCVisCallback(pl.Callback):
         """
         pl_module.logger.experiment.add_mesh(
             tag="val/samples",
-            vertices=vertices,
+            vertices=vertices[...,:3],
             colors=colors,
             global_step=trainer.current_epoch,
             config_dict={
@@ -129,3 +138,14 @@ class PCVisCallback(pl.Callback):
                 },
             },
         )
+
+        if vertices.shape[-1]>3:
+            renders = render_batch(vertices)
+            print(renders.shape)
+            torchvision.utils.save_image(renders, f"./gen_{trainer.current_epoch}.png")
+            pl_module.logger.experiment.add_image(f'gen', torchvision.utils.make_grid(renders), trainer.current_epoch)
+
+            renders = render_batch(self.batch.data)
+            torchvision.utils.save_image(renders, f"./gt_{trainer.current_epoch}.png")
+            pl_module.logger.experiment.add_image(f'gt', torchvision.utils.make_grid(renders), trainer.current_epoch)
+

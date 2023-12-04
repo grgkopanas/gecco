@@ -56,11 +56,15 @@ class GaussianReparam(Reparam):
 
     def data_to_diffusion(self, data: Tensor, ctx: Context3d) -> Tensor:
         del ctx
-        return (data - self.mean) / self.sigma
+        mean = self.mean[:data.shape[-1]]
+        sigma = self.sigma[:data.shape[-1]]
+        return (data - mean) / sigma
 
     def diffusion_to_data(self, diff: Tensor, ctx: Context3d) -> Tensor:
         del ctx
-        return diff * self.sigma + self.mean
+        mean = self.mean[:diff.shape[-1]]
+        sigma = self.sigma[:diff.shape[-1]]
+        return diff * sigma + mean
 
     def extra_repr(self) -> str:
         return f"mean={self.mean.flatten().tolist()}, sigma={self.sigma.flatten().tolist()}"
