@@ -6,7 +6,7 @@ from plyfile import PlyData, PlyElement
 
 from gecco_torch.structs import Example
 from gecco_torch.data.samplers import ConcatenatedSampler, FixedSampler
-
+from pvd.model.common import construct_sample
 
 class Dataset3DGS:
     def __init__(
@@ -56,11 +56,10 @@ class Dataset3DGS:
         scale = np.asarray(plydata.elements[0]["scale_0"])[..., None]
 
         if self.full_appearance:
-            properties = np.concatenate((xyz, f_dc, f_rest, opacity, scale), axis=1)
+            properties = construct_sample(xyz, f_dc, f_rest, opacity, scale)
         else:
             properties = xyz
-        #points = np.load(os.path.join(self.path, self.npys[index]))
-        #points = torch.from_numpy(points).to(torch.float32)
+
         perm = torch.randperm(properties.shape[0])[: self.n_points]
         selected = properties[perm]
         return Example(selected, [])

@@ -11,9 +11,9 @@ import lightning.pytorch as pl
 from torch import nn, Tensor
 from tqdm.auto import tqdm
 
-from gecco_torch.reparam import Reparam, NoReparam
+from gecco_torch.reparam import GaussianReparam
 from gecco_torch.structs import Example, Context3d
-
+from pvd.model.common import xyz_coord, feat_coord, opacity_coord, scale_coord
 
 def ones(n: int):
     return (1,) * n
@@ -157,7 +157,7 @@ class EDMLoss(nn.Module):
         n = torch.randn_like(ex_diff) * sigma
         D_yn = net(ex_diff + n, sigma, context)
         loss = self.loss_scale * weight * ((D_yn - ex_diff) ** 2)
-        return loss.mean()
+        return loss
 
 
 class Conditioner(nn.Module):
@@ -195,7 +195,7 @@ class Diffusion(pl.LightningModule):
         backbone: nn.Module,
         conditioner: Conditioner,
         loss: EDMLoss,
-        reparam: Reparam = NoReparam(dim=3),
+        reparam: GaussianReparam,
     ):
         super().__init__()
 
@@ -229,23 +229,26 @@ class Diffusion(pl.LightningModule):
 
     def training_step(self, batch: Example, batch_idx):
         x, ctx = batch
-        loss = self.loss(
-            self,
-            x,
-            ctx,
-        )
-        self.log("train_loss", loss, sync_dist=True)
+        loss = self.loss(self, x, ctx)
 
-        return loss
+        total_loss = loss.mean()
+        xyz_loss = loss[...,xyz_coord:xyz_coord+3].mean()
+        feat_loss = loss[...,feat_coord:feat_coord+12].mean()
+        opacity_loss = loss[...,opacity_coord:opacity_coord+1].mean()
+        scale_loss = loss[...,scale_coord:scale_coord+3].mean()
+
+        self.log("train_loss", total_loss, sync_dist=True)
+        self.log("xyz_loss", xyz_loss, sync_dist=True)
+        self.log("feat_loss", feat_loss, sync_dist=True)
+        self.log("opacity_loss", opacity_loss, sync_dist=True)
+        self.log("scale_loss", scale_loss, sync_dist=True)
+
+        return total_loss
 
     def validation_step(self, batch: Example, batch_idx):
         x, ctx = batch
-        loss = self.loss(
-            self,
-            x,
-            ctx,
-        )
-        self.log("val_loss", loss, sync_dist=True)
+        total_loss = self.loss(self, x, ctx).mean()
+        self.log("val_loss", total_loss, sync_dist=True)
 
     def forward(
         self,

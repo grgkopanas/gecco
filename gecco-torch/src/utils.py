@@ -2,6 +2,7 @@ import math
 import torch
 from pvd.gaussian_renderer.render_point_cloud import render_pc_naked
 from pvd.datasets.sphere_data_pc import get_cameras_fast
+from pvd.model.common import get_features, get_opacity, get_scales, get_xyz
 
 def render_batch(batch_data):
     batch_data = batch_data.float()
@@ -18,12 +19,12 @@ def render_batch(batch_data):
         rots = torch.zeros((1, batch_data.shape[1], 4)).cuda()
         rots[:, :, 0] = 1
 
-        features = batch_data[i,:,3:15]
+        features = get_features(batch_data[i])
         features = features.view(features.shape[0], 4, 3)
-        imgs.append(render_pc_naked(xyz = batch_data[i,:,:3],
+        imgs.append(render_pc_naked(xyz = get_xyz(batch_data[i]),
                                     sh = features,
-                                    alphas = batch_data[i,:,15:16],
-                                    scales = batch_data[i,:,16:17],
+                                    alphas = get_opacity(batch_data[i]),
+                                    scales = get_scales(batch_data[i]),
                                     rots = rots,
                                     world_view = cam_w2v.cuda(),
                                     proj = cam_proj.cuda(),
