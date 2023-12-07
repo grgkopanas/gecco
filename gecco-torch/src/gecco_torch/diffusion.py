@@ -365,7 +365,6 @@ class Diffusion(pl.LightningModule):
 
         if with_pbar:
             ts.close()
-
         return self.reparam.diffusion_to_data(x_next, context)
 
     @torch.no_grad()

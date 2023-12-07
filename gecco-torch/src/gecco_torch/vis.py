@@ -103,6 +103,7 @@ class PCVisCallback(pl.Callback):
                 sigma_max=pl_module.sigma_max,
                 num_steps=self.n_steps,
             )
+            print(f"{samples.shape=}")
 
         if not bool(self.batch.ctx):
             # no point showing "ground truth" for unconditional generation
@@ -126,6 +127,7 @@ class PCVisCallback(pl.Callback):
                 {f"point_cloud_{i}": wandb.Object3D(vertices.cpu().detach().numpy()[i])}
             )
         """
+        print(f"{vertices.shape=}")
         pl_module.logger.experiment.add_mesh(
             tag="val/samples",
             vertices=vertices[...,:3],
