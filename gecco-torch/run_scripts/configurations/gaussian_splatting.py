@@ -7,7 +7,7 @@ from .common import get_network
 
 def prepare_data(args):
     dataset_path = (
-        "/data/graphdeco/user/gkopanas/point_diffusion/datasets/train_3DGS_scape_cycles_fixed25k_split/"
+        "/gpfsdswork/projects/rech/hzb/urx22mc/datasets/train_3DGS_scape_cycles_fixed25k_split/"
     )
 
     return UncondDataModule_3DGS(

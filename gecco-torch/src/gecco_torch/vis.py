@@ -142,6 +142,25 @@ class PCVisCallback(pl.Callback):
         )
 
         if vertices.shape[-1]>3:
+
+        
+            pl_module.logger.experiment.add_histogram(tag="generated_opacity", 
+                                                      values=vertices.view(-1, vertices.shape[-1])[...,15],
+                                                      global_step=trainer.current_epoch)
+
+            pl_module.logger.experiment.add_histogram(tag="ground_truth_opacity", 
+                                                      values=self.batch.data.view(-1, vertices.shape[-1])[...,15],
+                                                      global_step=trainer.current_epoch)
+
+            pl_module.logger.experiment.add_histogram(tag="generated_scale", 
+                                                      values=vertices.view(-1, vertices.shape[-1])[...,16],
+                                                      global_step=trainer.current_epoch)
+
+            pl_module.logger.experiment.add_histogram(tag="ground_truth_scale", 
+                                                      values=self.batch.data.view(-1, vertices.shape[-1])[...,16],
+                                                      global_step=trainer.current_epoch)
+
+            
             renders = render_batch(vertices)
             print(renders.shape)
             torchvision.utils.save_image(renders, f"./gen_{trainer.current_epoch}.png")

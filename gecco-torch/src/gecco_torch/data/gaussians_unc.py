@@ -7,6 +7,7 @@ from plyfile import PlyData, PlyElement
 from gecco_torch.structs import Example
 from gecco_torch.data.samplers import ConcatenatedSampler, FixedSampler
 from pvd.model.common import construct_sample
+import math
 
 class Dataset3DGS:
     def __init__(
@@ -38,7 +39,8 @@ class Dataset3DGS:
         f_dc = np.stack((np.asarray(plydata.elements[0]["f_dc_0"]),
                          np.asarray(plydata.elements[0]["f_dc_1"]),
                          np.asarray(plydata.elements[0]["f_dc_2"])),  axis=1)
-        
+
+        #f_dc[...,:] = 0. 
         f_rest = np.stack((
                         np.asarray(plydata.elements[0]["f_rest_0"]), 
                         np.asarray(plydata.elements[0]["f_rest_3"]),
@@ -52,8 +54,12 @@ class Dataset3DGS:
                         np.asarray(plydata.elements[0]["f_rest_5"]),
                         np.asarray(plydata.elements[0]["f_rest_8"])),  axis=1)
 
+        #f_rest[...,:] = 0. 
+
+
         opacity = np.asarray(plydata.elements[0]["opacity"])[..., None]
         scale = np.asarray(plydata.elements[0]["scale_0"])[..., None]
+        #scale[..., :] = math.log(0.002)
 
         if self.full_appearance:
             properties = construct_sample(xyz, f_dc, f_rest, opacity, scale)
