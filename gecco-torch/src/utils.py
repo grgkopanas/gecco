@@ -3,6 +3,21 @@ import torch
 from pvd.gaussian_renderer.render_point_cloud import render_pc_naked
 from pvd.datasets.sphere_data_pc import get_cameras_fast
 from pvd.model.common import get_features, get_opacity, get_scales, get_xyz
+import os
+from plyfile import PlyData, PlyElement
+import numpy as np
+
+def save_ply_files(pcs, path, offset_id=0):
+    os.makedirs(path, exist_ok=True)
+    for i, pc in enumerate(pcs):
+        structured_array = np.empty(pc.shape[0], dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4')])
+
+        structured_array[:] = list(map(tuple, pc))
+
+        el = PlyElement.describe(structured_array, 'vertex')
+        PlyData([el], text=True).write(os.path.join(path, f"gen_{offset_id+i}.ply"))
+
+
 
 def render_batch(batch_data):
     batch_data = batch_data.float()

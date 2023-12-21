@@ -72,7 +72,8 @@ class TorchShapenet:
         n_points: int = 2048,
         batch_size: int = 48,
     ):
-        self.path = os.path.join(root, category, split)
+        self.path = os.path.join(root, category, "numpy_split", split)
+        print(self.path)
         if not os.path.exists(self.path):
             id = name_to_id[category]
             self.path = os.path.join(root, id, split)
@@ -87,7 +88,7 @@ class TorchShapenet:
         return len(self.npys)
 
     def __getitem__(self, index):
-        points = np.load(os.path.join(self.path, self.npys[index]))
+        points = np.load(os.path.join(self.path, self.npys[index]))[...,:3]
         points = torch.from_numpy(points).to(torch.float32)
         perm = torch.randperm(points.shape[0])[: self.n_points]
         selected = points[perm].clone()

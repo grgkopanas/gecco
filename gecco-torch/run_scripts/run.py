@@ -1,8 +1,8 @@
 import sys
 import os
-#from shapenet_airplane_unconditional import data, model
+from configurations.shapenet_airplane import prepare_data, prepare_model
 from configurations.common import prepare_trainer
-from configurations.gaussian_splatting import prepare_data, prepare_model
+#from configurations.gaussian_splatting import prepare_data, prepare_model
 from configurations.arguments import get_args
 from einops import rearrange
 import torch
