@@ -21,5 +21,8 @@ def get_args():
 
 
     parser.add_argument('--full_appearance', action='store_true')
+    parser.add_argument('--cnn_all_views', action='store_true')
+    parser.add_argument('--cnn_out_mult', required=False, type=int, default=2)
+    parser.add_argument('--num_views_per_step', required=False, type=int, default=3)
 
     return parser.parse_args()

@@ -19,10 +19,10 @@ class MultiView_Wrapper_Voxel(torch.nn.Module):
         super(MultiView_Wrapper_Voxel, self).__init__()
         H, W = args.voxel_resolution, args.voxel_resolution
         self.model = MultiView_DiffusionModel2(device=torch.device(0),
-                                               num_points=None,
-                                               num_views_per_step=None,
-                                               cam_radius=None,
-                                               H=H, W=W, FOV=None,
+                                               num_views_per_step=args.num_views_per_step,
+                                               cnn_all_views=args.cnn_all_views,
+                                               cnn_out_mult=args.cnn_out_mult,
+                                               H=H, W=W,
                                                cam_conditioning=False,
                                                normalize=True,
                                                act_in_viewspace=None,
